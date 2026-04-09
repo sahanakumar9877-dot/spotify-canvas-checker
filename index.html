@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spotify Canvas Checker</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #121212;
+    color: #fff;
+    min-height: 100vh;
+    padding: 2rem;
+    max-width: 960px;
+    margin: 0 auto;
+  }
+
+  h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.25rem; }
+  .subtitle { font-size: 0.85rem; color: #666; margin-bottom: 2rem; }
+
+  /* ── Auth ── */
+  .auth-panel {
+    background: #1a1a1a;
+    border: 1px solid #2a2a2a;
+    border-radius: 14px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+  }
+  .auth-panel h2 {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #1db954;
+    margin-bottom: 1rem;
+  }
+  .auth-info {
+    font-size: 0.83rem;
+    color: #888;
+    line-height: 1.6;
+    margin-bottom: 1rem;
+  }
+  .auth-info code {
+    background: #2a2a2a;
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-family: monospace;
+    color: #1db954;
+    font-size: 0.8rem;
+  }
+  .client-id-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+  .client-id-row input {
+    flex: 1;
+    min-width: 260px;
+    background: #2a2a2a;
+    border: 1px solid #444;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 0.85rem;
+    padding: 9px 14px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .client-id-row input:focus { border-color: #1db954; }
+  .client-id-row input::placeholder { color: #555; }
+
+  .user-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #1e1e1e;
+    border: 1px solid #2a2a2a;
+    border-radius: 10px;
+    padding: 10px 14px;
+  }
+  .user-avatar {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: #333;
+    object-fit: cover;
+  }
+  .user-avatar-placeholder {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: #1db954;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem; font-weight: 700; color: #000;
+    flex-shrink: 0;
+  }
+  .user-name { font-size: 0.9rem; font-weight: 600; }
+  .user-plan { font-size: 0.75rem; color: #888; }
+  .logout-btn {
+    margin-left: auto;
+    background: transparent;
+    color: #888;
+    border: 1px solid #333;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 5px 10px;
+    cursor: pointer;
+  }
+  .logout-btn:hover { color: #fff; border-color: #555; background: #2a2a2a; }
+
+  /* ── Input ── */
+  .input-panel {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 2rem;
+  }
+  .input-panel input {
+    flex: 1;
+    min-width: 260px;
+    background: #1e1e1e;
+    border: 1px solid #333;
+    border-radius: 10px;
+    color: #fff;
+    font-size: 0.9rem;
+    padding: 11px 16px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .input-panel input:focus { border-color: #1db954; }
+  .input-panel input::placeholder { color: #555; }
+  .input-panel input:disabled { opacity: 0.4; }
+
+  /* ── Buttons ── */
+  button {
+    background: #1db954;
+    color: #000;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 10px 20px;
+    cursor: pointer;
+    transition: background 0.15s, opacity 0.15s;
+    white-space: nowrap;
+  }
+  button:hover { background: #1ed760; }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  /* ── Status ── */
+  .status-bar {
+    font-size: 0.82rem;
+    color: #888;
+    margin-bottom: 1.5rem;
+    min-height: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .spinner {
+    width: 14px; height: 14px;
+    border: 2px solid #444;
+    border-top-color: #1db954;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Summary cards ── */
+  .summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 2rem;
+  }
+  .stat-card {
+    background: #1e1e1e;
+    border: 1px solid #2a2a2a;
+    border-radius: 10px;
+    padding: 1rem;
+    text-align: center;
+  }
+  .stat-number { font-size: 2rem; font-weight: 800; line-height: 1; }
+  .stat-number.green { color: #1db954; }
+  .stat-number.red { color: #e24b4a; }
+  .stat-number.yellow { color: #f59e0b; }
+  .stat-number.blue { color: #3b82f6; }
+  .stat-label { font-size: 0.75rem; color: #666; margin-top: 6px; text-transform: uppercase; letter-spacing: 0.07em; }
+
+  /* ── Filter bar ── */
+  .filter-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 1.25rem;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .filter-label { font-size: 0.8rem; color: #666; margin-right: 4px; }
+  .filter-btn {
+    background: #1e1e1e;
+    color: #aaa;
+    border: 1px solid #333;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 5px 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .filter-btn:hover { border-color: #555; color: #fff; background: #2a2a2a; }
+  .filter-btn.active { background: #1db954; color: #000; border-color: #1db954; }
+  .filter-btn.active:hover { background: #1ed760; }
+
+  /* ── Track list ── */
+  .track-list { display: flex; flex-direction: column; gap: 8px; }
+
+  .track-card {
+    background: #1a1a1a;
+    border: 1px solid #2a2a2a;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: border-color 0.15s;
+  }
+  .track-card:hover { border-color: #444; }
+  .track-card.has-canvas { border-left: 3px solid #1db954; }
+  .track-card.no-canvas { border-left: 3px solid #333; }
+
+  .track-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .track-num { font-size: 0.75rem; color: #555; width: 22px; text-align: right; flex-shrink: 0; }
+  .track-cover {
+    width: 44px; height: 44px;
+    border-radius: 6px;
+    object-fit: cover;
+    background: #333;
+    flex-shrink: 0;
+  }
+  .track-info { flex: 1; min-width: 0; }
+  .track-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .track-artist {
+    font-size: 0.78rem;
+    color: #888;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .canvas-badge {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+    flex-shrink: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .canvas-badge.yes { background: rgba(29,185,84,0.15); color: #1db954; border: 1px solid rgba(29,185,84,0.3); }
+  .canvas-badge.no { background: rgba(255,255,255,0.04); color: #555; border: 1px solid #2a2a2a; }
+  .canvas-badge.loading { background: #222; color: #666; border: 1px solid #333; animation: pulse 1.2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  .expand-icon { font-size: 0.75rem; color: #555; flex-shrink: 0; transition: transform 0.2s; }
+  .track-card.expanded .expand-icon { transform: rotate(180deg); }
+  .expand-icon.hidden { visibility: hidden; }
+
+  .track-body {
+    display: none;
+    padding: 0 14px 14px 14px;
+  }
+  .track-card.expanded .track-body { display: block; }
+
+  .canvas-video-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 200px;
+    margin: 0 auto;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #000;
+  }
+  .canvas-video {
+    width: 100%;
+    display: block;
+    border-radius: 10px;
+  }
+  .canvas-url {
+    font-size: 0.72rem;
+    color: #555;
+    margin-top: 8px;
+    word-break: break-all;
+    text-align: center;
+    font-family: monospace;
+  }
+  .no-canvas-msg {
+    font-size: 0.82rem;
+    color: #555;
+    text-align: center;
+    padding: 1rem 0;
+  }
+
+  /* ── Help ── */
+  details {
+    margin-bottom: 1.5rem;
+    background: #1a1a1a;
+    border: 1px solid #2a2a2a;
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    font-size: 0.82rem;
+    color: #888;
+    line-height: 1.7;
+  }
+  summary { cursor: pointer; color: #666; user-select: none; list-style: none; }
+  summary::before { content: "▶  "; font-size: 0.65rem; }
+  details[open] summary::before { content: "▼  "; }
+  details p, details ol { margin-top: 0.5rem; }
+  details ol { padding-left: 1.2rem; }
+  details li { margin-bottom: 0.3rem; }
+  code { background: #2a2a2a; border-radius: 4px; padding: 1px 6px; font-family: monospace; color: #1db954; font-size: 0.8rem; }
+  a { color: #1db954; }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<h1>🎬 Spotify Canvas Checker</h1>
+<p class="subtitle">See which tracks in a playlist have a Canvas video</p>
+
+<details>
+  <summary>Setup instructions (required — read before using)</summary>
+  <p><strong>Why login is needed:</strong> Canvas data is not available via the public Spotify API. This app uses an unofficial endpoint that requires a real user token.</p>
+  <p><strong>Setup (one time):</strong></p>
+  <ol>
+    <li>Go to <a href="https://developer.spotify.com/dashboard" target="_blank">developer.spotify.com/dashboard</a> and create a free app.</li>
+    <li>In your app settings, add <code id="redirect-uri-display"></code> as a <strong>Redirect URI</strong>. Copy the exact path shown.</li>
+    <li>Set the app type to <strong>Web API</strong>. Copy your <strong>Client ID</strong>.</li>
+    <li>Paste the Client ID below and click <strong>Log in with Spotify</strong>.</li>
+  </ol>
+  <p><strong>Privacy:</strong> Your token is stored only in your browser's sessionStorage and never sent anywhere except Spotify's servers.</p>
+</details>
+
+<!-- Auth panel -->
+<div class="auth-panel">
+  <h2>Spotify login</h2>
+  <div id="auth-logged-out">
+    <p class="auth-info">Paste your <code>Client ID</code> from the Spotify Developer Dashboard, then log in. The redirect URI to whitelist is shown in the setup instructions above.</p>
+    <div class="client-id-row">
+      <input type="text" id="client-id-input" placeholder="Paste Client ID here" />
+      <button onclick="startLogin()">Log in with Spotify</button>
+    </div>
+    <div id="auth-error" style="font-size:0.8rem;color:#e24b4a;margin-top:6px;min-height:18px;"></div>
+  </div>
+  <div id="auth-logged-in" class="hidden">
+    <div class="user-info">
+      <div id="user-avatar-wrap"></div>
+      <div>
+        <div class="user-name" id="user-name">—</div>
+        <div class="user-plan" id="user-plan">—</div>
+      </div>
+      <button class="logout-btn" onclick="logout()">Log out</button>
+    </div>
+  </div>
+</div>
+
+<!-- Playlist input -->
+<div class="input-panel">
+  <input type="text" id="playlist-url" placeholder="Paste Spotify playlist URL or URI" disabled
+    onkeydown="if(event.key==='Enter') checkPlaylist()" />
+  <button id="check-btn" onclick="checkPlaylist()" disabled>Check canvas</button>
+</div>
+
+<!-- Status -->
+<div class="status-bar hidden" id="status-bar">
+  <div class="spinner" id="spinner"></div>
+  <span id="status-text"></span>
+</div>
+
+<!-- Summary -->
+<div class="summary hidden" id="summary">
+  <div class="stat-card">
+    <div class="stat-number blue" id="stat-total">—</div>
+    <div class="stat-label">Total tracks</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-number green" id="stat-yes">—</div>
+    <div class="stat-label">Have canvas</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-number red" id="stat-no">—</div>
+    <div class="stat-label">No canvas</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-number yellow" id="stat-pct">—</div>
+    <div class="stat-label">Coverage</div>
+  </div>
+</div>
+
+<!-- Filter + list -->
+<div id="results-section" class="hidden">
+  <div class="filter-bar">
+    <span class="filter-label">Show:</span>
+    <button class="filter-btn active" data-filter="all" onclick="setFilter('all', this)">All</button>
+    <button class="filter-btn" data-filter="yes" onclick="setFilter('yes', this)">Has canvas</button>
+    <button class="filter-btn" data-filter="no" onclick="setFilter('no', this)">No canvas</button>
+  </div>
+  <div class="track-list" id="track-list"></div>
+</div>
+
+<script>
+// ── PKCE helpers ──────────────────────────────────────────────────────────
+function base64url(buf) {
+  return btoa(String.fromCharCode(...new Uint8Array(buf)))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+}
+async function sha256(plain) {
+  return crypto.subtle.digest('SHA-256', new TextEncoder().encode(plain));
+}
+function randomString(len) {
+  const arr = new Uint8Array(len);
+  crypto.getRandomValues(arr);
+  return base64url(arr).slice(0, len);
+}
+
+// ── Config ────────────────────────────────────────────────────────────────
+const REDIRECT_URI = location.href.split('?')[0].split('#')[0];
+const SCOPES = 'playlist-read-private playlist-read-collaborative user-read-private';
+let accessToken = null;
+let currentFilter = 'all';
+let trackData = [];
+
+// Show the redirect URI in the instructions
+document.getElementById('redirect-uri-display').textContent = REDIRECT_URI;
+
+// ── Auth ──────────────────────────────────────────────────────────────────
+async function startLogin() {
+  const clientId = document.getElementById('client-id-input').value.trim();
+  if (!clientId) {
+    document.getElementById('auth-error').textContent = 'Please enter a Client ID first.';
+    return;
+  }
+  sessionStorage.setItem('spotify_client_id', clientId);
+
+  const verifier = randomString(64);
+  const challenge = base64url(await sha256(verifier));
+  sessionStorage.setItem('pkce_verifier', verifier);
+
+  const params = new URLSearchParams({
+    client_id: clientId,
+    response_type: 'code',
+    redirect_uri: REDIRECT_URI,
+    scope: SCOPES,
+    code_challenge_method: 'S256',
+    code_challenge: challenge,
+    show_dialog: 'false'
+  });
+  location.href = 'https://accounts.spotify.com/authorize?' + params;
+}
+
+async function handleCallback() {
+  const params = new URLSearchParams(location.search);
+  const code = params.get('code');
+  const error = params.get('error');
+  if (error) {
+    document.getElementById('auth-error').textContent = 'Login cancelled or failed: ' + error;
+    history.replaceState({}, '', location.pathname);
+    return;
+  }
+  if (!code) return;
+
+  history.replaceState({}, '', location.pathname);
+
+  const clientId = sessionStorage.getItem('spotify_client_id');
+  const verifier = sessionStorage.getItem('pkce_verifier');
+  if (!clientId || !verifier) return;
+
+  try {
+    const res = await fetch('https://accounts.spotify.com/api/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        code,
+        redirect_uri: REDIRECT_URI,
+        client_id: clientId,
+        code_verifier: verifier
+      })
+    });
+    if (!res.ok) throw new Error('Token exchange failed');
+    const data = await res.json();
+    accessToken = data.access_token;
+    sessionStorage.setItem('spotify_token', accessToken);
+    sessionStorage.removeItem('pkce_verifier');
+    await loadUser();
+  } catch (e) {
+    document.getElementById('auth-error').textContent = e.message;
+  }
+}
+
+async function loadUser() {
+  if (!accessToken) return;
+  try {
+    const res = await fetch('https://api.spotify.com/v1/me', {
+      headers: { Authorization: 'Bearer ' + accessToken }
+    });
+    if (!res.ok) { logout(); return; }
+    const user = await res.json();
+
+    const avatarWrap = document.getElementById('user-avatar-wrap');
+    if (user.images && user.images.length) {
+      avatarWrap.innerHTML = `<img class="user-avatar" src="${user.images[0].url}" alt="">`;
+    } else {
+      const initial = (user.display_name || user.id || '?')[0].toUpperCase();
+      avatarWrap.innerHTML = `<div class="user-avatar-placeholder">${initial}</div>`;
+    }
+    document.getElementById('user-name').textContent = user.display_name || user.id;
+    document.getElementById('user-plan').textContent =
+      (user.product === 'premium' ? '✓ Premium' : user.product || 'Free') + ' · ' + (user.country || '');
+
+    document.getElementById('auth-logged-out').classList.add('hidden');
+    document.getElementById('auth-logged-in').classList.remove('hidden');
+    document.getElementById('playlist-url').disabled = false;
+    document.getElementById('check-btn').disabled = false;
+  } catch (e) { logout(); }
+}
+
+function logout() {
+  accessToken = null;
+  sessionStorage.removeItem('spotify_token');
+  sessionStorage.removeItem('spotify_client_id');
+  document.getElementById('auth-logged-in').classList.add('hidden');
+  document.getElementById('auth-logged-out').classList.remove('hidden');
+  document.getElementById('playlist-url').disabled = true;
+  document.getElementById('check-btn').disabled = true;
+  document.getElementById('summary').classList.add('hidden');
+  document.getElementById('results-section').classList.add('hidden');
+}
+
+// ── Parse playlist ID ─────────────────────────────────────────────────────
+function parsePlaylistId(input) {
+  input = input.trim();
+  // URI: spotify:playlist:xxx
+  const uriMatch = input.match(/spotify:playlist:([A-Za-z0-9]+)/);
+  if (uriMatch) return uriMatch[1];
+  // URL: open.spotify.com/playlist/xxx
+  const urlMatch = input.match(/playlist\/([A-Za-z0-9]+)/);
+  if (urlMatch) return urlMatch[1];
+  // Raw ID (22 chars alphanumeric)
+  if (/^[A-Za-z0-9]{22}$/.test(input)) return input;
+  return null;
+}
+
+// ── Main check flow ───────────────────────────────────────────────────────
+async function checkPlaylist() {
+  const input = document.getElementById('playlist-url').value;
+  const playlistId = parsePlaylistId(input);
+  if (!playlistId) {
+    setStatus('Could not parse playlist ID. Paste a Spotify playlist URL or URI.', false, true);
+    return;
+  }
+
+  document.getElementById('summary').classList.add('hidden');
+  document.getElementById('results-section').classList.add('hidden');
+  document.getElementById('track-list').innerHTML = '';
+  trackData = [];
+
+  setStatus('Fetching playlist tracks…', true);
+
+  try {
+    // 1. Fetch all tracks (paginated)
+    let tracks = [];
+    let url = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=50&fields=next,items(track(id,name,artists,album(images)))`;
+    while (url) {
+      const page = await apiFetch(url);
+      const valid = page.items.filter(i => i.track && i.track.id);
+      tracks = tracks.concat(valid.map(i => i.track));
+      url = page.next;
+    }
+
+    if (tracks.length === 0) throw new Error('Playlist is empty or inaccessible.');
+
+    setStatus(`Loaded ${tracks.length} tracks. Checking Canvas…`, true);
+
+    // 2. Build initial track cards (loading state)
+    trackData = tracks.map((t, i) => ({
+      index: i + 1,
+      id: t.id,
+      name: t.name,
+      artist: t.artists.map(a => a.name).join(', '),
+      cover: t.album.images[1]?.url || t.album.images[0]?.url || '',
+      canvasUrl: null,
+      checked: false
+    }));
+
+    showResults();
+    renderTracks();
+
+    // 3. Check canvas in batches of 5
+    const BATCH = 5;
+    for (let i = 0; i < trackData.length; i += BATCH) {
+      const batch = trackData.slice(i, i + BATCH);
+      await Promise.all(batch.map(t => checkCanvas(t)));
+      updateSummary();
+      renderTracks();
+      setStatus(
+        `Checking Canvas… ${Math.min(i + BATCH, trackData.length)} / ${trackData.length}`,
+        true
+      );
+    }
+
+    updateSummary();
+    renderTracks();
+    setStatus('', false);
+
+  } catch (e) {
+    setStatus('Error: ' + e.message, false, true);
+  }
+}
+
+async function checkCanvas(track) {
+  try {
+    // Unofficial Spotify canvas endpoint
+    const res = await fetch(
+      `https://spclient.wg.spotify.com/canvaz-cache/v0/canvases`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + accessToken,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ tracks: [{ track_uri: `spotify:track:${track.id}` }] })
+      }
+    );
+    if (res.ok) {
+      const data = await res.json();
+      const canvas = data.canvases && data.canvases[0];
+      if (canvas && canvas.canvas_url) {
+        track.canvasUrl = canvas.canvas_url;
+      }
+    }
+  } catch (_) { /* network error — treat as no canvas */ }
+  track.checked = true;
+}
+
+// ── Render ────────────────────────────────────────────────────────────────
+function showResults() {
+  document.getElementById('results-section').classList.remove('hidden');
+  document.getElementById('summary').classList.remove('hidden');
+}
+
+function updateSummary() {
+  const checked = trackData.filter(t => t.checked);
+  const withCanvas = trackData.filter(t => t.canvasUrl);
+  const total = trackData.length;
+  const pct = checked.length > 0
+    ? Math.round((withCanvas.length / checked.length) * 100) + '%'
+    : '—';
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-yes').textContent = withCanvas.length;
+  document.getElementById('stat-no').textContent = checked.length - withCanvas.length;
+  document.getElementById('stat-pct').textContent = pct;
+}
+
+function renderTracks() {
+  const list = document.getElementById('track-list');
+  const filtered = currentFilter === 'all' ? trackData
+    : currentFilter === 'yes' ? trackData.filter(t => t.canvasUrl)
+    : trackData.filter(t => t.checked && !t.canvasUrl);
+
+  // Preserve expanded states
+  const expanded = new Set();
+  list.querySelectorAll('.track-card.expanded').forEach(el => expanded.add(el.dataset.id));
+
+  list.innerHTML = '';
+
+  filtered.forEach(t => {
+    const hasCanvas = !!t.canvasUrl;
+    const isLoading = !t.checked;
+    const isExpanded = expanded.has(t.id);
+
+    const card = document.createElement('div');
+    card.className = 'track-card' +
+      (hasCanvas ? ' has-canvas' : ' no-canvas') +
+      (isExpanded ? ' expanded' : '');
+    card.dataset.id = t.id;
+
+    const badgeClass = isLoading ? 'loading' : hasCanvas ? 'yes' : 'no';
+    const badgeText = isLoading ? '…' : hasCanvas ? '✦ Canvas' : 'No canvas';
+    const canExpand = hasCanvas;
+
+    card.innerHTML = `
+      <div class="track-header" onclick="toggleCard(this)">
+        <span class="track-num">${t.index}</span>
+        <img class="track-cover" src="${t.cover}" alt="" loading="lazy">
+        <div class="track-info">
+          <div class="track-name">${escHtml(t.name)}</div>
+          <div class="track-artist">${escHtml(t.artist)}</div>
+        </div>
+        <span class="canvas-badge ${badgeClass}">${badgeText}</span>
+        <span class="expand-icon ${canExpand ? '' : 'hidden'}">▼</span>
+      </div>
+      <div class="track-body">
+        ${hasCanvas ? `
+          <div class="canvas-video-wrap">
+            <video class="canvas-video" src="${t.canvasUrl}" autoplay loop muted playsinline></video>
+          </div>
+          <div class="canvas-url">${t.canvasUrl}</div>
+        ` : `<div class="no-canvas-msg">No Canvas for this track.</div>`}
+      </div>
+    `;
+
+    if (isExpanded && hasCanvas) {
+      card.querySelector('.track-body').style.display = 'block';
+    }
+
+    list.appendChild(card);
+  });
+
+  if (filtered.length === 0 && trackData.length > 0) {
+    list.innerHTML = '<div style="color:#555;font-size:0.9rem;padding:2rem 0;text-align:center;">No tracks match this filter.</div>';
+  }
+}
+
+function toggleCard(header) {
+  const card = header.closest('.track-card');
+  if (!card.classList.contains('has-canvas')) return;
+  card.classList.toggle('expanded');
+}
+
+function setFilter(filter, btn) {
+  currentFilter = filter;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTracks();
+}
+
+function setStatus(text, loading, isErr) {
+  const bar = document.getElementById('status-bar');
+  const spinner = document.getElementById('spinner');
+  const label = document.getElementById('status-text');
+  if (!text) { bar.classList.add('hidden'); return; }
+  bar.classList.remove('hidden');
+  spinner.style.display = loading ? 'block' : 'none';
+  label.textContent = text;
+  label.style.color = isErr ? '#e24b4a' : '#888';
+}
+
+async function apiFetch(url) {
+  const res = await fetch(url, { headers: { Authorization: 'Bearer ' + accessToken } });
+  if (res.status === 401) { logout(); throw new Error('Session expired. Please log in again.'); }
+  if (!res.ok) throw new Error('Spotify API error: ' + res.status);
+  return res.json();
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+// Restore token from session if available
+const savedToken = sessionStorage.getItem('spotify_token');
+if (savedToken) {
+  accessToken = savedToken;
+  loadUser();
+}
+
+// Handle OAuth callback
+handleCallback();
+</script>
+</body>
+</html>
